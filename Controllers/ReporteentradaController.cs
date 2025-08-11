@@ -228,6 +228,42 @@ namespace Sistema_Almacen_MariaDB.Controllers
 
 
         #endregion
+        #region 156
+        [HttpGet]
+        [Route("api/reporte/entradas/filtrado")]
+        public HttpResponseMessage DescargarReporteEntradasFiltrado(
+    string fechaInicio = null,
+    string fechaFin = null,
+    int? folioInicio = null,
+    int? folioFin = null,
+    int? idProveedor = null,
+    int? idArticulo = null,
+    int? idSede = null
+)
+        {
+            DateTime? fi = string.IsNullOrEmpty(fechaInicio) ? (DateTime?)null : DateTime.Parse(fechaInicio);
+            DateTime? ff = string.IsNullOrEmpty(fechaFin) ? (DateTime?)null : DateTime.Parse(fechaFin);
+
+            var entradas = _entradaService.ObtenerEntradasFiltradas(
+                fi, ff, folioInicio, folioFin, idProveedor, idArticulo, idSede
+            );
+
+            var pdfBytes = new ReporteEntradaService().GenerarReporteEntradasFiltrado(entradas, fi, ff);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(pdfBytes)
+            };
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "Reporte_Entradas_Filtrado.pdf"
+            };
+
+            return response;
+        }
+
+        #endregion
     }
 }
 

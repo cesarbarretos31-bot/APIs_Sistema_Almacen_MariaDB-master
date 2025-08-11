@@ -556,5 +556,119 @@ namespace Sistema_Almacen_MariaDB.Service
 
 
         #endregion
+
+        #region 156
+        public byte[] GenerarReporteEntradasFiltrado(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null)
+        {
+            using (var ms = new MemoryStream())
+            {
+                Document doc = new Document(PageSize.A4.Rotate(), 20, 20, 20, 20);
+                PdfWriter.GetInstance(doc, ms);
+                doc.Open();
+
+                var fontTitulo = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14);
+                var fontEncabezado = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10);
+                var fontNormal = FontFactory.GetFont(FontFactory.HELVETICA, 10);
+                CultureInfo culturaMX = new CultureInfo("es-MX");
+
+                string logoPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Logo_Thh.png");
+                Image logo = Image.GetInstance(logoPath);
+                logo.ScaleAbsolute(80f, 80f);
+
+                PdfPTable encabezado = new PdfPTable(2) { WidthPercentage = 100 };
+                encabezado.SetWidths(new float[] { 1.2f, 4f });
+
+                encabezado.AddCell(new PdfPCell(logo) { Border = Rectangle.NO_BORDER, Rowspan = 3 });
+                encabezado.AddCell(new PdfPCell(new Phrase("TRANSPORTES HIDRO HIDALGUENSES S.A DE C.V", fontTitulo)) { Border = Rectangle.NO_BORDER });
+                encabezado.AddCell(new PdfPCell(new Phrase("REPORTE DE ENTRADAS", fontTitulo)) { Border = Rectangle.NO_BORDER });
+
+                string fechaGeneracion = "GENERADO EL: " + DateTime.Now.ToString("dd/MM/yyyy");
+                if (fechaInicio.HasValue && fechaFin.HasValue)
+                {
+                    fechaGeneracion += $" | PERIODO: {fechaInicio.Value:dd/MM/yyyy} - {fechaFin.Value:dd/MM/yyyy}";
+                }
+
+                encabezado.AddCell(new PdfPCell(new Phrase(fechaGeneracion, fontNormal)) { Border = Rectangle.NO_BORDER });
+
+                doc.Add(encabezado);
+                doc.Add(new Paragraph("\n"));
+
+                PdfPTable tabla = new PdfPTable(9) { WidthPercentage = 100 };
+                tabla.SetWidths(new float[] { 1f, 1.5f, 1.5f, 2f, 2.5f, 2f, 2f, 1.5f, 1.5f });
+
+                tabla.AddCell(new Phrase("FOLIO", fontEncabezado));
+                tabla.AddCell(new Phrase("FECHA", fontEncabezado));
+                tabla.AddCell(new Phrase("HORA", fontEncabezado));
+                tabla.AddCell(new Phrase("MOVIMIENTO", fontEncabezado));
+                tabla.AddCell(new Phrase("PROVEEDOR", fontEncabezado));
+                tabla.AddCell(new Phrase("ARTÍCULO", fontEncabezado));
+                tabla.AddCell(new Phrase("UNIDAD", fontEncabezado));
+                tabla.AddCell(new Phrase("CANTIDAD", fontEncabezado));
+                tabla.AddCell(new Phrase("TOTAL", fontEncabezado));
+
+                int totalGeneralCantidad = 0;
+                decimal totalGeneralImporte = 0;
+
+                foreach (var entrada in entradas)
+                {
+                    bool primeraFila = true;
+
+                    foreach (var detalle in entrada.Detalles)
+                    {
+                        if (primeraFila)
+                        {
+                            tabla.AddCell(new Phrase(entrada.ID_Entradas.ToString(), fontNormal));
+                            tabla.AddCell(new Phrase(entrada.Fecha?.ToString("dd/MM/yyyy") ?? "-", fontNormal));
+                            tabla.AddCell(new Phrase(entrada.Hora?.ToString(@"hh\:mm") ?? "-", fontNormal));
+                            tabla.AddCell(new Phrase(entrada.Nombre_Movimiento ?? "-", fontNormal));
+                            tabla.AddCell(new Phrase(entrada.Razon_Social ?? "-", fontNormal));
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 5; i++)
+                                tabla.AddCell(new PdfPCell(new Phrase("")) { Border = Rectangle.NO_BORDER });
+                        }
+
+                        tabla.AddCell(new Phrase(detalle.Nombre_Articulo ?? "-", fontNormal));
+                        tabla.AddCell(new Phrase(detalle.Nombre_Unidad ?? "-", fontNormal));
+
+                        PdfPCell celdaCant = new PdfPCell(new Phrase(detalle.Cantidad?.ToString() ?? "0", fontNormal));
+                        celdaCant.HorizontalAlignment = Element.ALIGN_RIGHT;
+                        tabla.AddCell(celdaCant);
+
+                        PdfPCell celdaTotal = new PdfPCell(new Phrase(detalle.Total?.ToString("C2", culturaMX) ?? "$0.00", fontNormal));
+                        celdaTotal.HorizontalAlignment = Element.ALIGN_RIGHT;
+                        tabla.AddCell(celdaTotal);
+
+                        totalGeneralCantidad += detalle.Cantidad ?? 0;
+                        totalGeneralImporte += detalle.Total ?? 0;
+
+                        primeraFila = false;
+                    }
+
+                    // Línea separadora
+                    PdfPCell separador = new PdfPCell(new Phrase(" "))
+                    {
+                        Colspan = 9,
+                        Border = Rectangle.BOTTOM_BORDER,
+                        BorderColor = BaseColor.LIGHT_GRAY,
+                        MinimumHeight = 5f
+                    };
+                    tabla.AddCell(separador);
+                }
+
+                doc.Add(tabla);
+                doc.Add(new Paragraph("\n"));
+
+                Paragraph resumen = new Paragraph($"TOTAL GENERAL - CANTIDAD: {totalGeneralCantidad} | TOTAL: {totalGeneralImporte.ToString("C2", culturaMX)}", fontNormal);
+                resumen.Alignment = Element.ALIGN_RIGHT;
+                doc.Add(resumen);
+
+                doc.Close();
+                return ms.ToArray();
+            }
+        }
+
+        #endregion
     }
 }
