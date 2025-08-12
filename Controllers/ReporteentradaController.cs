@@ -144,32 +144,20 @@ namespace Sistema_Almacen_MariaDB.Controllers
         #endregion
         #region REPORTE ENTRADAS POR ARTICULO #4
         [HttpGet]
-        [Route("api/reporte/entradas/articulo")]
-        public HttpResponseMessage DescargarReporteEntradasPorArticulo(
-     int? idArticulo = null,
+        [Route("api/reporte/entradas/Articulo")]
+        public HttpResponseMessage DescargarEntradasPorArticulo(
      string fechaInicio = null,
      string fechaFin = null,
-     int? idSede = null) // 👈 nuevo parámetro aquí
+     int? folioInicio = null,
+     int? folioFin = null,
+     int? idArticulo = null,
+     int? idSede = null)
         {
-            DateTime? fechaInicioParsed = null;
-            DateTime? fechaFinParsed = null;
+            DateTime? fi = string.IsNullOrEmpty(fechaInicio) ? (DateTime?)null : DateTime.Parse(fechaInicio);
+            DateTime? ff = string.IsNullOrEmpty(fechaFin) ? (DateTime?)null : DateTime.Parse(fechaFin);
 
-            if (!string.IsNullOrEmpty(fechaInicio))
-                fechaInicioParsed = DateTime.Parse(fechaInicio);
-
-            if (!string.IsNullOrEmpty(fechaFin))
-                fechaFinParsed = DateTime.Parse(fechaFin);
-
-            var entradas = _entradaService.ObtenerEntradasPorArticulo(
-                idArticulo,
-                fechaInicioParsed,
-                fechaFinParsed,
-                idSede // 👈 pasamos sede
-            );
-
-            var pdfBytes = new ReporteEntradaService()
-                .GenerarReportePorArticulo(entradas, fechaInicioParsed, fechaFinParsed);
-
+            var detalles = _entradaService.ObtenerEntradasPorArticulo(fi, ff, folioInicio, folioFin, idArticulo, idSede);
+            var pdfBytes = new ReporteEntradaService().GenerarReporteEntradasPorArticulo(detalles, fi, ff);
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(pdfBytes)
@@ -179,9 +167,10 @@ namespace Sistema_Almacen_MariaDB.Controllers
             {
                 FileName = "Reporte_Entradas_Por_Articulo.pdf"
             };
-
             return response;
         }
+
+
 
 
         #endregion

@@ -13,7 +13,9 @@ namespace Sistema_Almacen_MariaDB.Infraestructure
         GetEntradasDto ObtenerEntradaPorId(int idEntrada, int idSede);
         List<GetEntradasDto> ObtenerEntradasFiltradas(int? idSede = null, DateTime? fechaInicio = null, DateTime? fechaFin = null);
         List<GetEntradasDto> ObtenerEntradasFiltradas(DateTime? fechaInicio, DateTime? fechaFin, int? folioInicio, int? folioFin, int? idProveedor, int? idArticulo, int? idSede);
-        List<GetEntradasDto> ObtenerEntradasPorArticulo(int? idArticulo, DateTime? fechaInicio, DateTime? fechaFin, int? idSede = null);
+        List<GetDetallesEntradasDto> ObtenerEntradasPorArticulo(DateTime? fechaInicio, DateTime? fechaFin, int? folioInicio, int? folioFin, int? idArticulo, int? idSede);
+
+
         List<GetEntradasDto> ObtenerEntradasPorMovimiento(int? idMovimiento, DateTime? fechaInicio, DateTime? fechaFin, int? idSede = null);
         List<GetEntradasDto> ObtenerEntradasPorProveedor(int idProveedor, DateTime? fechaInicio = null, DateTime? fechaFin = null, int? idSede = null);
         List<GetEntradasDto> ObtenerEntradasPorSede(int idSede);

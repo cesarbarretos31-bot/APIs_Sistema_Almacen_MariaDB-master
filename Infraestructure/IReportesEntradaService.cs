@@ -9,7 +9,10 @@ namespace Sistema_Almacen_MariaDB.Infraestructure
 {
     interface IReportesEntradaService
     {
-        byte[] GenerarReportePorArticulo(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);
+    
+        byte[] GenerarReporteEntradasFiltrado(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);
+     
+byte[] GenerarReporteEntradasPorArticulo(List<GetDetallesEntradasDto> detalles, DateTime? fechaInicio, DateTime? fechaFin);
         byte[] GenerarReportePorEntrada(GetEntradasDto entrada);
         byte[] GenerarReportePorMovimiento(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);
         byte[] GenerarReportePorProveedor(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);

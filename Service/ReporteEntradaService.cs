@@ -346,11 +346,14 @@ namespace Sistema_Almacen_MariaDB.Service
         #endregion
 
         #region REPORTES DE ENTRADAS POR ARTICULO #4
-        public byte[] GenerarReportePorArticulo(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null)
+        public byte[] GenerarReporteEntradasPorArticulo(
+       List<GetDetallesEntradasDto> detalles,
+       DateTime? fechaInicio,
+       DateTime? fechaFin)
         {
             using (var ms = new MemoryStream())
             {
-                Document doc = new Document(PageSize.A4.Rotate(), 20, 20, 20, 20);
+                Document doc = new Document(PageSize.A4, 20, 20, 20, 20);
                 PdfWriter.GetInstance(doc, ms);
                 doc.Open();
 
@@ -359,6 +362,7 @@ namespace Sistema_Almacen_MariaDB.Service
                 var fontNormal = FontFactory.GetFont(FontFactory.HELVETICA, 10);
                 CultureInfo culturaMX = new CultureInfo("es-MX");
 
+                // Encabezado
                 string logoPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Logo_Thh.png");
                 Image logo = Image.GetInstance(logoPath);
                 logo.ScaleAbsolute(80f, 80f);
@@ -367,85 +371,46 @@ namespace Sistema_Almacen_MariaDB.Service
                 encabezado.WidthPercentage = 100;
                 encabezado.SetWidths(new float[] { 1.2f, 4f });
 
-                encabezado.AddCell(new PdfPCell(logo) { Border = Rectangle.NO_BORDER, Rowspan = 3 });
-                encabezado.AddCell(new PdfPCell(new Phrase("TRANSPORTES HIDRO HIDALGUENSES S.A DE C.V", fontTitulo)) { Border = Rectangle.NO_BORDER });
+                encabezado.AddCell(new PdfPCell(logo) { Border = Rectangle.NO_BORDER, Rowspan = 2 });
                 encabezado.AddCell(new PdfPCell(new Phrase("REPORTE DE ENTRADAS POR ARTÍCULO", fontTitulo)) { Border = Rectangle.NO_BORDER });
-
-                string fechaGeneracion = "GENERADO EL: " + DateTime.Now.ToString("dd/MM/yyyy");
-                if (fechaInicio.HasValue && fechaFin.HasValue)
-                {
-                    fechaGeneracion += $" | PERIODO: {fechaInicio:dd/MM/yyyy} - {fechaFin:dd/MM/yyyy}";
-                }
-                encabezado.AddCell(new PdfPCell(new Phrase(fechaGeneracion, fontNormal)) { Border = Rectangle.NO_BORDER });
+                encabezado.AddCell(new PdfPCell(new Phrase($"Rango: {fechaInicio?.ToString("dd/MM/yyyy")} - {fechaFin?.ToString("dd/MM/yyyy")}", fontNormal)) { Border = Rectangle.NO_BORDER });
 
                 doc.Add(encabezado);
                 doc.Add(new Paragraph("\n"));
 
-                // Agrupar por artículo
-                var articulos = entradas
-                    .SelectMany(e => e.Detalles.Select(d => new { Entrada = e, Detalle = d }))
-                    .GroupBy(x => x.Detalle.Nombre_Articulo)
-                    .OrderBy(g => g.Key);
+                // Tabla principal
+                PdfPTable tabla = new PdfPTable(5);
+                tabla.WidthPercentage = 100;
+                tabla.SetWidths(new float[] { 3f, 2f, 1f, 2f, 2f });
 
-                int totalGeneralCantidad = 0;
-                decimal totalGeneralImporte = 0;
+                tabla.AddCell(new Phrase("ARTÍCULO", fontEncabezado));
+                tabla.AddCell(new Phrase("UNIDAD", fontEncabezado));
+                tabla.AddCell(new Phrase("ID", fontEncabezado));
+                tabla.AddCell(new Phrase("CANTIDAD", fontEncabezado));
+                tabla.AddCell(new Phrase("TOTAL", fontEncabezado));
 
-                foreach (var grupo in articulos)
+                foreach (var d in detalles)
                 {
-                    doc.Add(new Paragraph($"ARTÍCULO: {grupo.Key}", fontEncabezado));
+                    tabla.AddCell(new Phrase(d.Nombre_Articulo ?? "-", fontNormal));
+                    tabla.AddCell(new Phrase(d.Nombre_Unidad ?? "-", fontNormal));
+                    tabla.AddCell(new Phrase(d.ID_Articulo?.ToString() ?? "-", fontNormal));
 
-                    PdfPTable tabla = new PdfPTable(8);
-                    tabla.WidthPercentage = 100;
-                    tabla.SetWidths(new float[] { 1.5f, 2f, 2f, 3f, 2f, 1.5f, 2f, 2f });
+                    var celdaCantidad = new PdfPCell(new Phrase(d.Cantidad?.ToString() ?? "0", fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
+                    var celdaTotal = new PdfPCell(new Phrase(d.Total?.ToString("C2", culturaMX) ?? "$0.00", fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
 
-                    tabla.AddCell(new Phrase("FOLIO", fontEncabezado));
-                    tabla.AddCell(new Phrase("FECHA", fontEncabezado));
-                    tabla.AddCell(new Phrase("HORA", fontEncabezado));
-                    tabla.AddCell(new Phrase("PROVEEDOR", fontEncabezado));
-                    tabla.AddCell(new Phrase("UNIDAD DE MEDIDA", fontEncabezado));
-                    tabla.AddCell(new Phrase("CANTIDAD", fontEncabezado));
-                    tabla.AddCell(new Phrase("P. UNITARIO", fontEncabezado));
-                    tabla.AddCell(new Phrase("TOTAL", fontEncabezado));
-
-                    int subtotalCantidad = 0;
-                    decimal subtotalImporte = 0;
-
-                    foreach (var item in grupo)
-                    {
-                        var entrada = item.Entrada;
-                        var d = item.Detalle;
-
-                        tabla.AddCell(new Phrase(entrada.ID_Entradas.ToString(), fontNormal));
-                        tabla.AddCell(new Phrase(entrada.Fecha?.ToString("dd/MM/yyyy") ?? "-", fontNormal));
-                        tabla.AddCell(new Phrase(entrada.Hora?.ToString(@"hh\:mm") ?? "-", fontNormal));
-                        tabla.AddCell(new Phrase(entrada.Razon_Social ?? "-", fontNormal));
-                        tabla.AddCell(new Phrase(d.Nombre_Unidad ?? "-", fontNormal));
-
-                        PdfPCell celdaCant = new PdfPCell(new Phrase((d.Cantidad ?? 0).ToString(), fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
-                        PdfPCell celdaPU = new PdfPCell(new Phrase((d.Precio_Unitario ?? 0).ToString("C2", culturaMX), fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
-                        PdfPCell celdaTotal = new PdfPCell(new Phrase((d.Total ?? 0).ToString("C2", culturaMX), fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
-
-                        tabla.AddCell(celdaCant);
-                        tabla.AddCell(celdaPU);
-                        tabla.AddCell(celdaTotal);
-
-                        subtotalCantidad += d.Cantidad ?? 0;
-                        subtotalImporte += d.Total ?? 0;
-                    }
-
-                    totalGeneralCantidad += subtotalCantidad;
-                    totalGeneralImporte += subtotalImporte;
-
-                    doc.Add(tabla);
-                    Paragraph subtotal = new Paragraph($"Subtotal - Cantidad: {subtotalCantidad} | Total: {subtotalImporte.ToString("C2", culturaMX)}", fontNormal);
-                    subtotal.Alignment = Element.ALIGN_RIGHT;
-                    doc.Add(subtotal);
-                    doc.Add(new Paragraph("\n"));
+                    tabla.AddCell(celdaCantidad);
+                    tabla.AddCell(celdaTotal);
                 }
 
-                Paragraph total = new Paragraph($"TOTAL GENERAL - CANTIDAD: {totalGeneralCantidad} | TOTAL: {totalGeneralImporte.ToString("C2", culturaMX)}", fontNormal);
-                total.Alignment = Element.ALIGN_RIGHT;
-                doc.Add(total);
+                doc.Add(tabla);
+
+                // Resumen
+                int totalCantidad = detalles.Sum(x => x.Cantidad ?? 0);
+                decimal totalImporte = detalles.Sum(x => x.Total ?? 0);
+                Paragraph resumen = new Paragraph($"TOTAL CANTIDAD: {totalCantidad} | TOTAL IMPORTE: {totalImporte.ToString("C2", culturaMX)}", fontNormal);
+                resumen.Alignment = Element.ALIGN_RIGHT;
+                doc.Add(new Paragraph("\n"));
+                doc.Add(resumen);
 
                 doc.Close();
                 return ms.ToArray();
