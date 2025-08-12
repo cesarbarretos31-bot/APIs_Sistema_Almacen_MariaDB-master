@@ -18,6 +18,7 @@ namespace Sistema_Almacen_MariaDB.Infraestructure
 
         List<GetEntradasDto> ObtenerEntradasPorMovimiento(int? idMovimiento, DateTime? fechaInicio, DateTime? fechaFin, int? idSede = null);
         List<GetEntradasDto> ObtenerEntradasPorProveedor(int idProveedor, DateTime? fechaInicio = null, DateTime? fechaFin = null, int? idSede = null);
+        List<GetEntradasDto> ObtenerEntradasPorProveedorYArticulo(int? idSede, int? idProveedor, DateTime? fechaInicio, DateTime? fechaFin, int? folioInicio, int? folioFin);
         List<GetEntradasDto> ObtenerEntradasPorSede(int idSede);
         bool RegistrarEntradayDetalles(EntradasDto entradasdto);
     }

@@ -594,7 +594,7 @@ ORDER BY m.Nombre_Movimiento, e.Fecha;";
 
         #endregion
 
-
+        #region Entradas filtradas
         public List<GetEntradasDto> ObtenerEntradasFiltradas(
     DateTime? fechaInicio,
     DateTime? fechaFin,
@@ -660,6 +660,72 @@ ORDER BY m.Nombre_Movimiento, e.Fecha;";
 
             return entradasDict.Values.ToList();
         }
+        #endregion
+
+        #region Reporte de proveedores por Articulos
+        public List<GetEntradasDto> ObtenerEntradasPorProveedorYArticulo(
+    int? idSede,
+    int? idProveedor,
+    DateTime? fechaInicio,
+    DateTime? fechaFin,
+    int? folioInicio,
+    int? folioFin)
+        {
+            var sql = @"
+        SELECT e.ID_Entradas, e.Fecha, e.Hora, e.Comentarios,
+               e.ID_Proveedores, p.Razon_Social,
+               e.ID_Sede,
+               de.ID_Articulo, a.Nombre_Articulo, um.Nombre_Unidad,
+               de.Cantidad, de.Precio_Unitario, de.Total
+        FROM Entradas e
+        INNER JOIN Proveedores p ON e.ID_Proveedores = p.ID_Proveedores
+        INNER JOIN detalle_entrada de ON e.ID_Entradas = de.ID_Entradas
+        INNER JOIN Articulo a ON de.ID_Articulo = a.ID_Articulo
+        INNER JOIN Unidades_Medida um ON a.ID_Medida = um.ID_Medida
+        WHERE (@idSede IS NULL OR e.ID_Sede = @idSede)
+          AND (@idProveedor IS NULL OR e.ID_Proveedores = @idProveedor)
+          AND (@fechaInicio IS NULL OR e.Fecha >= @fechaInicio)
+          AND (@fechaFin IS NULL OR e.Fecha <= @fechaFin)
+          AND (@folioInicio IS NULL OR e.ID_Entradas >= @folioInicio)
+          AND (@folioFin IS NULL OR e.ID_Entradas <= @folioFin)
+        ORDER BY e.Fecha ASC, e.ID_Entradas ASC
+    ";
+
+            var parametros = new DynamicParameters();
+            parametros.Add("@idSede", idSede);
+            parametros.Add("@idProveedor", idProveedor);
+            parametros.Add("@fechaInicio", fechaInicio);
+            parametros.Add("@fechaFin", fechaFin);
+            parametros.Add("@folioInicio", folioInicio);
+            parametros.Add("@folioFin", folioFin);
+
+            var entradasDict = new Dictionary<int, GetEntradasDto>();
+
+            using (var connection = new MySqlConnection(_connectionString))
+            {
+                connection.Query<GetEntradasDto, GetDetallesEntradasDto, GetEntradasDto>(
+                    sql,
+                    (entrada, detalle) =>
+                    {
+                        if (!entradasDict.TryGetValue(entrada.ID_Entradas, out var entradaExistente))
+                        {
+                            entrada.Detalles = new List<GetDetallesEntradasDto>();
+                            entradasDict.Add(entrada.ID_Entradas, entrada);
+                            entradaExistente = entrada;
+                        }
+                        entradaExistente.Detalles.Add(detalle);
+                        return entradaExistente;
+                    },
+                    parametros,
+                    splitOn: "ID_Articulo"
+                );
+            }
+
+            return entradasDict.Values.ToList();
+        }
+
+
+        #endregion
 
     }
 }

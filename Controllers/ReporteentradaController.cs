@@ -253,6 +253,53 @@ namespace Sistema_Almacen_MariaDB.Controllers
         }
 
         #endregion
+        #region reporte entradas por proveedor y articulos 
+        [HttpGet]
+        [Route("api/reporte/entradas/ProveedorPorArticulo")]
+        public HttpResponseMessage DescargarReporteEntradasPorProveedor(
+    int? idSede = null,
+    int? idProveedor = null,
+    string fechaInicio = null,
+    string fechaFin = null,
+    int? folioInicio = null,
+    int? folioFin = null)
+        {
+            DateTime? fi = string.IsNullOrEmpty(fechaInicio) ? (DateTime?)null : DateTime.Parse(fechaInicio);
+            DateTime? ff = string.IsNullOrEmpty(fechaFin) ? (DateTime?)null : DateTime.Parse(fechaFin);
+
+            // 1. Obtener los datos desde el servicio
+            var entradas = _entradaService.ObtenerEntradasPorProveedorYArticulo(
+                idSede,
+                idProveedor,
+                fi,
+                ff,
+                folioInicio,
+                folioFin
+            );
+
+            // 2. Generar PDF
+            var pdfBytes = new ReporteEntradaService().GenerarReporteEntradasPorProveedor(
+                entradas,
+                idProveedor,
+                fi,
+                ff
+            );
+
+            // 3. Preparar la respuesta
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(pdfBytes)
+            };
+            response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "Reporte_Entradas_Por_Proveedor.pdf"
+            };
+
+            return response;
+        }
+
+        #endregion
     }
 }
 

@@ -13,6 +13,7 @@ namespace Sistema_Almacen_MariaDB.Infraestructure
         byte[] GenerarReporteEntradasFiltrado(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);
      
 byte[] GenerarReporteEntradasPorArticulo(List<GetDetallesEntradasDto> detalles, DateTime? fechaInicio, DateTime? fechaFin);
+        byte[] GenerarReporteEntradasPorProveedor(List<GetEntradasDto> entradas, int? idProveedor, DateTime? fechaInicio, DateTime? fechaFin);
         byte[] GenerarReportePorEntrada(GetEntradasDto entrada);
         byte[] GenerarReportePorMovimiento(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);
         byte[] GenerarReportePorProveedor(List<GetEntradasDto> entradas, DateTime? fechaInicio = null, DateTime? fechaFin = null);

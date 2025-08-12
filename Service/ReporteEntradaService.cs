@@ -635,5 +635,91 @@ namespace Sistema_Almacen_MariaDB.Service
         }
 
         #endregion
+
+        #region entrdads por provedor y articulo 
+        public byte[] GenerarReporteEntradasPorProveedor(
+     List<GetEntradasDto> entradas,
+     int? idProveedor,
+     DateTime? fechaInicio,
+     DateTime? fechaFin)
+        {
+            using (var ms = new MemoryStream())
+            {
+                Document doc = new Document(PageSize.A4, 20, 20, 20, 20);
+                PdfWriter.GetInstance(doc, ms);
+                doc.Open();
+
+                var fontTitulo = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14);
+                var fontEncabezado = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 10);
+                var fontNormal = FontFactory.GetFont(FontFactory.HELVETICA, 10);
+                CultureInfo culturaMX = new CultureInfo("es-MX");
+
+                string logoPath = System.Web.Hosting.HostingEnvironment.MapPath("~/Content/Logo_Thh.png");
+                Image logo = Image.GetInstance(logoPath);
+                logo.ScaleAbsolute(80f, 80f);
+
+                PdfPTable encabezado = new PdfPTable(2);
+                encabezado.WidthPercentage = 100;
+                encabezado.SetWidths(new float[] { 1.2f, 4f });
+                encabezado.AddCell(new PdfPCell(logo) { Border = Rectangle.NO_BORDER, Rowspan = 3 });
+                encabezado.AddCell(new PdfPCell(new Phrase("TRANSPORTES HIDRO HIDALGUENSES S.A DE C.V", fontTitulo)) { Border = Rectangle.NO_BORDER });
+                encabezado.AddCell(new PdfPCell(new Phrase("REPORTE DE ENTRADAS POR PROVEEDOR", fontTitulo)) { Border = Rectangle.NO_BORDER });
+                encabezado.AddCell(new PdfPCell(new Phrase("Generado el: " + DateTime.Now.ToString("dd/MM/yyyy"), fontNormal)) { Border = Rectangle.NO_BORDER });
+
+                doc.Add(encabezado);
+                doc.Add(new Paragraph("\n"));
+
+                // Agrupar por proveedor
+                var entradasPorProveedor = entradas.GroupBy(e => new { e.ID_Proveedores, e.Razon_Social });
+
+                foreach (var proveedorGroup in entradasPorProveedor)
+                {
+                    // Encabezado del proveedor
+                    doc.Add(new Paragraph($"Proveedor: {proveedorGroup.Key.Razon_Social} (ID: {proveedorGroup.Key.ID_Proveedores})", fontEncabezado));
+                    doc.Add(new Paragraph("\n"));
+
+                    PdfPTable tabla = new PdfPTable(5);
+                    tabla.WidthPercentage = 100;
+                    tabla.SetWidths(new float[] { 3f, 2f, 1f, 2f, 2f });
+                    tabla.AddCell(new Phrase("ARTÍCULO", fontEncabezado));
+                    tabla.AddCell(new Phrase("UNIDAD", fontEncabezado));
+                    tabla.AddCell(new Phrase("ID", fontEncabezado));
+                    tabla.AddCell(new Phrase("CANTIDAD", fontEncabezado));
+                    tabla.AddCell(new Phrase("TOTAL", fontEncabezado));
+
+                    int totalCantidad = 0;
+                    decimal totalImporte = 0;
+
+                    foreach (var entrada in proveedorGroup)
+                    {
+                        foreach (var detalle in entrada.Detalles)
+                        {
+                            tabla.AddCell(new Phrase(detalle.Nombre_Articulo, fontNormal));
+                            tabla.AddCell(new Phrase(detalle.Nombre_Unidad, fontNormal));
+                            tabla.AddCell(new Phrase(detalle.ID_Articulo?.ToString() ?? "-", fontNormal));
+
+                            var celdaCantidad = new PdfPCell(new Phrase(detalle.Cantidad?.ToString() ?? "0", fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
+                            var celdaTotal = new PdfPCell(new Phrase(detalle.Total?.ToString("C2", culturaMX) ?? "$0.00", fontNormal)) { HorizontalAlignment = Element.ALIGN_RIGHT };
+
+                            tabla.AddCell(celdaCantidad);
+                            tabla.AddCell(celdaTotal);
+
+                            totalCantidad += detalle.Cantidad ?? 0;
+                            totalImporte += detalle.Total ?? 0;
+                        }
+                    }
+
+                    doc.Add(tabla);
+                    doc.Add(new Paragraph($"\nTOTAL CANTIDAD: {totalCantidad} | TOTAL IMPORTE: {totalImporte.ToString("C2", culturaMX)}", fontNormal));
+                    doc.Add(new Paragraph("\n"));
+                }
+
+                doc.Close();
+                return ms.ToArray();
+            }
+        }
+
+
+        #endregion
     }
 }
